@@ -46,6 +46,10 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         }
         JSONObject data = getPushData(bundle.getString("data"));
         // Copy `twi_body` to `message` to support Twilio
+        
+        if (bundle.containsKey("twi_title")) {
+            bundle.putString("title", bundle.getString("twi_title"));
+        }
         if (bundle.containsKey("twi_body")) {
             bundle.putString("message", bundle.getString("twi_body"));
         }
@@ -129,6 +133,10 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         }
 
         Log.v(LOG_TAG, "sendNotification: " + bundle);
+        
+        Application applicationContext = (Application) context.getApplicationContext();
+        RNPushNotificationHelper pushNotificationHelper = new RNPushNotificationHelper(applicationContext);
+        pushNotificationHelper.sendToNotificationCentre(bundle);
     }
 
     private boolean isApplicationInForeground() {
