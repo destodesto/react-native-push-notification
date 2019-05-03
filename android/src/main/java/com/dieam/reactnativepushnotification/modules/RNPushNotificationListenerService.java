@@ -26,6 +26,8 @@ import java.util.Random;
 import static com.dieam.reactnativepushnotification.modules.RNPushNotification.LOG_TAG;
 
 public class RNPushNotificationListenerService extends FirebaseMessagingService {
+    public static final String TWI_MSG_CALL   = "twilio.voice.call";
+    public static final String TWI_MSG_CANCEL = "twilio.voice.cancel";
 
     @Override
     public void onMessageReceived(RemoteMessage message) {
@@ -46,6 +48,22 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         }
         JSONObject data = getPushData(bundle.getString("data"));
         // Copy `twi_body` to `message` to support Twilio
+        
+        
+        if (bundle.containsKey("twi_message_type")) {
+            switch (bundle.getString("twi_message_type")) {
+                case (TWI_MSG_CALL): {
+                    bundle.putString("message", bundle.getString("twi_from") + " is calling.");
+                    bundle.putString("priority", "low");
+                } 
+                break;
+    
+                case (TWI_MSG_CANCEL): {
+                    bundle.putString("message", bundle.getString("twi_from") + " missed a call from you.");
+                }
+                break;
+            }
+        }
         
         if (bundle.containsKey("twi_title")) {
             bundle.putString("title", bundle.getString("twi_title"));
