@@ -28,6 +28,8 @@ import static com.dieam.reactnativepushnotification.modules.RNPushNotification.L
 public class RNPushNotificationListenerService extends FirebaseMessagingService {
     public static final String TWI_MSG_CALL   = "twilio.voice.call";
     public static final String TWI_MSG_CANCEL = "twilio.voice.cancel";
+    private ReactInstanceManager mReactInstanceManager;
+    private Boolean isForeground;
 
     @Override
     public void onMessageReceived(RemoteMessage message) {
@@ -48,22 +50,6 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         }
         JSONObject data = getPushData(bundle.getString("data"));
         // Copy `twi_body` to `message` to support Twilio
-        
-        
-        if (bundle.containsKey("twi_message_type")) {
-            switch (bundle.getString("twi_message_type")) {
-                case (TWI_MSG_CALL): {
-                    bundle.putString("message", bundle.getString("twi_from") + " is calling.");
-                    bundle.putString("priority", "low");
-                } 
-                break;
-    
-                case (TWI_MSG_CANCEL): {
-                    bundle.putString("message", bundle.getString("twi_from") + " missed a call from you.");
-                }
-                break;
-            }
-        }
         
         if (bundle.containsKey("twi_title")) {
             bundle.putString("title", bundle.getString("twi_title"));
@@ -101,7 +87,6 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         handler.post(new Runnable() {
             public void run() {
                 // Construct and load our normal React JS code bundle
-                ReactInstanceManager mReactInstanceManager = ((ReactApplication) getApplication()).getReactNativeHost().getReactInstanceManager();
                 ReactContext context = mReactInstanceManager.getCurrentReactContext();
                 // If it's constructed, send a notification
                 if (context != null) {
@@ -138,8 +123,6 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
             bundle.putString("id", String.valueOf(randomNumberGenerator.nextInt()));
         }
 
-        Boolean isForeground = isApplicationInForeground();
-
         RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
         bundle.putBoolean("foreground", isForeground);
         bundle.putBoolean("userInteraction", false);
@@ -153,26 +136,10 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         Log.v(LOG_TAG, "sendNotification: " + bundle);
         
         if (bundle.getString("isNotificationShowed", "true").equalsIgnoreCase("true")) {
-					Application applicationContext = (Application) context.getApplicationContext();
-					RNPushNotificationHelper pushNotificationHelper = new RNPushNotificationHelper(applicationContext);
-					pushNotificationHelper.sendToNotificationCentre(bundle);
-			}
+            Application applicationContext = (Application) context.getApplicationContext();
+            RNPushNotificationHelper pushNotificationHelper = new RNPushNotificationHelper(applicationContext);
+            pushNotificationHelper.sendToNotificationCentre(bundle);
+        }
     }
 
-    private boolean isApplicationInForeground() {
-        ActivityManager activityManager = (ActivityManager) this.getSystemService(ACTIVITY_SERVICE);
-        List<RunningAppProcessInfo> processInfos = activityManager.getRunningAppProcesses();
-        if (processInfos != null) {
-            for (RunningAppProcessInfo processInfo : processInfos) {
-                if (processInfo.processName.equals(getApplication().getPackageName())) {
-                    if (processInfo.importance == RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
-                        for (String d : processInfo.pkgList) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-    }
 }
