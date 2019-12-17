@@ -296,6 +296,10 @@ Notifications.clearLocalNotification = function() {
     return this.callNative('clearLocalNotification', arguments);
 };
 
+Notifications.setPushNotificationSettings = function() {
+	return this.callNative('setPushNotificationSettings', arguments);
+};
+
 Notifications.cancelAllLocalNotifications = function() {
 	return this.callNative('cancelAllLocalNotifications', arguments);
 };
