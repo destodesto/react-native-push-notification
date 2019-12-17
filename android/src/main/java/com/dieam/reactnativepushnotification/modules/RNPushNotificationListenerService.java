@@ -7,6 +7,7 @@ import com.google.firebase.messaging.RemoteMessage;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.app.Application;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -29,7 +30,7 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
     public static final String TWI_MSG_CALL   = "twilio.voice.call";
     public static final String TWI_MSG_CANCEL = "twilio.voice.cancel";
     private ReactInstanceManager mReactInstanceManager;
-    private Boolean isForeground;
+	private Boolean isForeground;
 
     @Override
     public void onMessageReceived(RemoteMessage message) {
@@ -133,11 +134,10 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
             jsDelivery.notifyRemoteFetch(bundle);
         }
 
-        Log.v(LOG_TAG, "sendNotification: " + bundle);
-        
-        if (bundle.getString("isNotificationShowed", "true").equalsIgnoreCase("true")) {
-            Application applicationContext = (Application) context.getApplicationContext();
-            RNPushNotificationHelper pushNotificationHelper = new RNPushNotificationHelper(applicationContext);
+        Application applicationContext = (Application) context.getApplicationContext();
+        RNPushNotificationHelper pushNotificationHelper = new RNPushNotificationHelper(applicationContext);
+
+        if (pushNotificationHelper.getNotificationSettingsPersistence().getBoolean("isPushNotificationEnabled", true)) {
             pushNotificationHelper.sendToNotificationCentre(bundle);
         }
     }
