@@ -227,5 +227,12 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
     @ReactMethod
     public void registerNotificationActions(ReadableArray actions) {
         registerNotificationsReceiveNotificationActions(actions);
+		}
+		
+		@ReactMethod
+    public void setPushNotificationSettings(ReadableMap settings) {
+        Bundle bundle = Arguments.toBundle(settings);
+        
+        mRNPushNotificationHelper.setPushNotificationSettings(bundle);
     }
 }

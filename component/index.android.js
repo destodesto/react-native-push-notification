@@ -42,6 +42,10 @@ NotificationsComponent.prototype.clearLocalNotification = function(details: Obje
 	RNPushNotification.clearLocalNotification(details);
 };
 
+NotificationsComponent.prototype.setPushNotificationSettings = function(settings: Object) {
+	RNPushNotification.setPushNotificationSettings(settings);
+};
+
 NotificationsComponent.prototype.cancelAllLocalNotifications = function() {
 	RNPushNotification.cancelAllLocalNotifications();
 };
