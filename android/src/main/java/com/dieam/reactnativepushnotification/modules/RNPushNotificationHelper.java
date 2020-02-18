@@ -37,7 +37,7 @@ import static com.dieam.reactnativepushnotification.modules.RNPushNotificationAt
 
 public class RNPushNotificationHelper {
     public static final String PREFERENCES_KEY = "rn_push_notification";
-    public static final String PREFERENCES_KEY_SETTINGS = "rn_push_notification_settings";
+		public static final String PREFERENCES_KEY_NOTIFICATION_SETTINGS = "group.com.sosearch.sos";
     private static final long DEFAULT_VIBRATION = 300L;
     private static final String NOTIFICATION_CHANNEL_ID = "rn-push-notification-channel-id";
     private Context context;
@@ -48,13 +48,13 @@ public class RNPushNotificationHelper {
     private final SharedPreferences notificationSettingsPersistence;
     private static final int ONE_MINUTE = 60 * 1000;
     private static final long ONE_HOUR = 60 * ONE_MINUTE;
-    private static final long ONE_DAY = 24 * ONE_HOUR;
+		private static final long ONE_DAY = 24 * ONE_HOUR;
 
     public RNPushNotificationHelper(Application context) {
         this.context = context;
         this.config = new RNPushNotificationConfig(context);
         this.scheduledNotificationsPersistence = context.getSharedPreferences(RNPushNotificationHelper.PREFERENCES_KEY, Context.MODE_PRIVATE);
-        this.notificationSettingsPersistence   = context.getSharedPreferences(RNPushNotificationHelper.PREFERENCES_KEY_SETTINGS, Context.MODE_PRIVATE);
+        this.notificationSettingsPersistence   = context.getSharedPreferences(RNPushNotificationHelper.PREFERENCES_KEY_NOTIFICATION_SETTINGS, Context.MODE_PRIVATE);
     }
 
     public Class getMainActivityClass() {
@@ -288,7 +288,7 @@ public class RNPushNotificationHelper {
             bundle.putBoolean("userInteraction", true);
             intent.putExtra("notification", bundle);
 
-			if (notificationSettingsPersistence.getBoolean("isSoundEnabled", true)) {
+			if (bundle.getBoolean("hasSound")) {
                 Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 String soundName = bundle.getString("soundName");
                 if (soundName != null) {
@@ -338,12 +338,12 @@ public class RNPushNotificationHelper {
 
             notification.setContentIntent(pendingIntent);
 
-			if (notificationSettingsPersistence.getBoolean("isVibrateEnabled", true)) {
-                long vibration = bundle.containsKey("vibration") ? (long) bundle.getDouble("vibration") : DEFAULT_VIBRATION;
-                if (vibration == 0)
-                    vibration = DEFAULT_VIBRATION;
-                notification.setVibrate(new long[]{0, vibration});
-            }
+			// if (notificationSettingsPersistence.getBoolean("isVibrateEnabled", true)) {
+      //           long vibration = bundle.containsKey("vibration") ? (long) bundle.getDouble("vibration") : DEFAULT_VIBRATION;
+      //           if (vibration == 0)
+      //               vibration = DEFAULT_VIBRATION;
+      //           notification.setVibrate(new long[]{0, vibration});
+      //       }
 
             JSONArray actionsArray = null;
             try {
@@ -611,10 +611,10 @@ public class RNPushNotificationHelper {
     }
 
     public void setPushNotificationSettings(Bundle bundle) {
-        SharedPreferences.Editor editor = notificationSettingsPersistence.edit();
-        editor.putBoolean("isSoundEnabled", bundle.getBoolean("isSoundEnabled", true));
-        editor.putBoolean("isVibrateEnabled", bundle.getBoolean("isVibrateEnabled", true));
-        editor.putBoolean("isPushNotificationEnabled", bundle.getBoolean("isPushNotificationEnabled", true));
-        commit(editor);
+        // SharedPreferences.Editor editor = notificationSettingsPersistence.edit();
+        // editor.putBoolean("isSoundEnabled", bundle.getBoolean("isSoundEnabled", true));
+        // editor.putBoolean("isVibrateEnabled", bundle.getBoolean("isVibrateEnabled", true));
+        // editor.putBoolean("isPushNotificationEnabled", bundle.getBoolean("isPushNotificationEnabled", true));
+        // commit(editor);
     }
 }

@@ -12,15 +12,25 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.content.Context;
+import android.content.Intent;
+import android.os.PowerManager;
+import android.app.KeyguardManager;
+import android.app.KeyguardManager.KeyguardLock;
+import android.view.Window;
+import android.view.WindowManager;
+import android.app.Activity;
 
 import com.dieam.reactnativepushnotification.helpers.ApplicationBadgeHelper;
 import com.facebook.react.ReactApplication;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.UiThreadUtil;
 
 import org.json.JSONObject;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -28,9 +38,12 @@ import static com.dieam.reactnativepushnotification.modules.RNPushNotification.L
 
 public class RNPushNotificationListenerService extends FirebaseMessagingService {
     public static final String TWI_MSG_CALL   = "twilio.voice.call";
-    public static final String TWI_MSG_CANCEL = "twilio.voice.cancel";
+		public static final String TWI_MSG_CANCEL = "twilio.voice.cancel";
+		private static final String[] alertsNotifCategory 	 = {"CAL_SEN","CAL_ACC","CAL_REC","CAL_UPD","HEA_SEN","HEA_REC","HEA_ACC","SHO_ADD","SHO_REM","PHO_SEN","PHO_REC","PHO_ACC","VID_SEN","VID_REC","VID_ACC","MES_SEN","MES_REC","NEA_UPD"};
+    private static final String[] videoCallNotifCategory = {"VIDEO_CALL_MISSED"};
+		private static final String[] nearMeNotifCategory    = {"NEA_UPD","USER_NEAR_ME"};
     private ReactInstanceManager mReactInstanceManager;
-	private Boolean isForeground;
+		private Boolean isForeground;
 
     @Override
     public void onMessageReceived(RemoteMessage message) {
@@ -88,15 +101,15 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         handler.post(new Runnable() {
             public void run() {
                 // Construct and load our normal React JS code bundle
-                ReactContext context = mReactInstanceManager.getCurrentReactContext();
+								ReactContext context = mReactInstanceManager.getCurrentReactContext();
                 // If it's constructed, send a notification
                 if (context != null) {
-                    handleRemotePushNotification((ReactApplicationContext) context, bundle);
+										handleRemotePushNotification((ReactApplicationContext) context, bundle);
                 } else {
                     // Otherwise wait for construction, then send the notification
                     mReactInstanceManager.addReactInstanceEventListener(new ReactInstanceManager.ReactInstanceEventListener() {
                         public void onReactContextInitialized(ReactContext context) {
-                            handleRemotePushNotification((ReactApplicationContext) context, bundle);
+													handleRemotePushNotification((ReactApplicationContext) context, bundle);
                         }
                     });
                     if (!mReactInstanceManager.hasStartedCreatingInitialContext()) {
@@ -114,32 +127,103 @@ public class RNPushNotificationListenerService extends FirebaseMessagingService 
         } catch (Exception e) {
             return null;
         }
-    }
+		}
 
     private void handleRemotePushNotification(ReactApplicationContext context, Bundle bundle) {
 
-        // If notification ID is not provided by the user for push notification, generate one at random
-        if (bundle.getString("id") == null) {
-            Random randomNumberGenerator = new Random(System.currentTimeMillis());
-            bundle.putString("id", String.valueOf(randomNumberGenerator.nextInt()));
-        }
+			// If notification ID is not provided by the user for push notification, generate one at random
+			if (bundle.getString("id") == null) {
+				Random randomNumberGenerator = new Random(System.currentTimeMillis());
+				bundle.putString("id", String.valueOf(randomNumberGenerator.nextInt()));
+			}
 
-        RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
-        bundle.putBoolean("foreground", isForeground);
-        bundle.putBoolean("userInteraction", false);
-        jsDelivery.notifyNotification(bundle);
+			RNPushNotificationJsDelivery jsDelivery = new RNPushNotificationJsDelivery(context);
+			bundle.putBoolean("foreground", isForeground);
+			bundle.putBoolean("userInteraction", false);
+			jsDelivery.notifyNotification(bundle);
 
-        // If contentAvailable is set to true, then send out a remote fetch event
-        if (bundle.getString("contentAvailable", "false").equalsIgnoreCase("true")) {
-            jsDelivery.notifyRemoteFetch(bundle);
-        }
+			// If contentAvailable is set to true, then send out a remote fetch event
+			if (bundle.getString("contentAvailable", "false").equalsIgnoreCase("true")) {
+					jsDelivery.notifyRemoteFetch(bundle);
+			}
 
-        Application applicationContext = (Application) context.getApplicationContext();
-        RNPushNotificationHelper pushNotificationHelper = new RNPushNotificationHelper(applicationContext);
+			Application applicationContext = (Application) context.getApplicationContext();
+			RNPushNotificationHelper pushNotificationHelper = new RNPushNotificationHelper(applicationContext);
 
-        if (pushNotificationHelper.getNotificationSettingsPersistence().getBoolean("isPushNotificationEnabled", true)) {
-            pushNotificationHelper.sendToNotificationCentre(bundle);
-        }
+			String notifProfile = pushNotificationHelper.getNotificationSettingsPersistence().getString("notifProfile", null);
+			String notifType    = bundle.getString("notifType");
+
+			if ((notifProfile.equals("NOTIF_SILENT") || notifProfile.equals("NOTIF_SIGHT_SOUND")) && bundle.getString("isNotificationShowed", "true").equalsIgnoreCase("true")) {
+				pushNotificationHelper.sendToNotificationCentre(bundle);
+			} else if (notifProfile.equals("NOTIF_CUSTOMIZE") && bundle.getString("isNotificationShowed", "true").equalsIgnoreCase("true")) {
+				Boolean showNotification = true;
+				Boolean hasSound 				 = true;
+				String soundName 				 = null;
+
+				if (Arrays.asList(alertsNotifCategory).contains(notifType)) {
+					showNotification = !Boolean.parseBoolean(pushNotificationHelper.getNotificationSettingsPersistence().getString("isAlertSilent", "false"));
+					hasSound 				 = !Boolean.parseBoolean(pushNotificationHelper.getNotificationSettingsPersistence().getString("isAlertMuted", "false"));
+					soundName 			 = hasSound ? pushNotificationHelper.getNotificationSettingsPersistence().getString("notifAlertSound", null) : null;
+
+				} else if (Arrays.asList(nearMeNotifCategory).contains(notifType)) {
+					showNotification = !Boolean.parseBoolean(pushNotificationHelper.getNotificationSettingsPersistence().getString("isNearMeSilent", "false"));
+					hasSound 				 = !Boolean.parseBoolean(pushNotificationHelper.getNotificationSettingsPersistence().getString("isNearMeMuted", "false"));
+					soundName 			 = hasSound ? pushNotificationHelper.getNotificationSettingsPersistence().getString("notifAlertSound", null) : null;
+				} else {
+					//Twilio Chat
+
+					showNotification = !Boolean.parseBoolean(pushNotificationHelper.getNotificationSettingsPersistence().getString("isChatSilent", "false"));
+					hasSound 				 = !Boolean.parseBoolean(pushNotificationHelper.getNotificationSettingsPersistence().getString("isChatMuted", "false"));
+					soundName 			 = hasSound ? pushNotificationHelper.getNotificationSettingsPersistence().getString("notifChatSound", null) : null;
+				}
+
+				if (showNotification) {
+					bundle.putBoolean("hasSound", hasSound);
+					bundle.putString("soundName", soundName);
+					pushNotificationHelper.sendToNotificationCentre(bundle);
+				}
+			}
+            
+			if (notifType != null) {
+				if (notifType.equalsIgnoreCase("VID_DIA")) {
+					if (!isForeground) {
+						Class intentClass = pushNotificationHelper.getMainActivityClass();
+						if (intentClass == null) {
+								Log.e(LOG_TAG, "No activity class found. ");
+								return;
+						} else {
+							KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+							KeyguardLock keyguardLock = keyguardManager.newKeyguardLock(Context.KEYGUARD_SERVICE);
+							keyguardLock.disableKeyguard();
+							
+							PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+							PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
+												PowerManager.FULL_WAKE_LOCK
+											| PowerManager.ACQUIRE_CAUSES_WAKEUP
+											| PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+											| PowerManager.ON_AFTER_RELEASE, "RNUnlockDeviceModule");
+							
+							wakeLock.acquire();
+	
+							// Window window = getCurrentActivity().getWindow();
+							// window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+							// WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
+							// WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
+							// WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+	
+							Intent activityIntent = new Intent(context, intentClass);
+	
+							activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK +
+								WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED +
+								WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD +
+								WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON +
+								WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+							);
+							context.startActivity(activityIntent);
+						}
+					}
+				}
+			}
     }
 
 }
